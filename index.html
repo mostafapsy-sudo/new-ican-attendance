@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Many Circles Nursery - إدارة الحضور</title>
+    <title>I can إدارة الحضور</title>
     <!-- Bootstrap 5 RTL -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css">
     <!-- Font Awesome -->
@@ -98,16 +98,17 @@
     </style>
 </head>
 <body>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <div class="container-fluid py-3">
         <!-- ========== الشاشة الرئيسية ========== -->
         <div id="mainScreen" class="text-center">
             <div class="mt-5">
                 <i class="fas fa-circle circle-icon fa-3x"></i>
-                <span class="logo">Many Circles Nursery</span>
+                <span class="logo">مركز ICAN للتدخل المبكر</span>
             </div>
             <div class="mt-4">
                 <button class="btn btn-primary btn-circle mx-2 px-5" id="adminMainBtn"><i class="fas fa-user-cog"></i> الإدارة</button>
-                <button class="btn btn-success btn-circle mx-2 px-5" id="teacherMainBtn"><i class="fas fa-chalkboard-teacher"></i> المدرسات</button>
+                <button class="btn btn-success btn-circle mx-2 px-5" id="teacherMainBtn"><i class="fas fa-chalkboard-teacher"></i> الأخصائين</button>
             </div>
         </div>
 
@@ -127,7 +128,7 @@
         <!-- ========== شاشة دخول المدرسات ========== -->
         <div id="teacherLoginScreen" class="hidden">
             <div class="card p-4 mx-auto" style="max-width: 400px;">
-                <h4 class="text-center">تسجيل دخول المدرسات</h4>
+                <h4 class="text-center">تسجيل دخول الأخصائين</h4>
                 <input type="text" id="teacherUsername" class="form-control my-2" placeholder="اسم المستخدم">
                 <input type="password" id="teacherPassword" class="form-control my-2" placeholder="كلمة المرور">
                 <div class="d-flex justify-content-between">
@@ -148,7 +149,7 @@
             <!-- أزرار الإدارة الرئيسية -->
             <div class="row mb-3">
                 
-                <div class="col-md-3"><button class="btn btn-warning w-100" id="addTeacherBtn"><i class="fas fa-plus"></i> إضافة معلمة</button></div>
+                <div class="col-md-3"><button class="btn btn-warning w-100" id="addTeacherBtn"><i class="fas fa-plus"></i> إضافة اخصائي</button></div>
                 
                 <div class="col-md-3"><button class="btn btn-info w-100" id="summaryReportBtn"><i class="fas fa-chart-pie"></i> ملخص الحضور</button></div>
                 
@@ -180,12 +181,12 @@
             </div>
         </div>
 
-        <!-- Modal عام لتعديل/إضافة معلمة -->
+        <!-- Modal عام لتعديل/إضافة اخصائي -->
         <div class="modal fade" id="teacherModal" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="teacherModalTitle">إضافة معلمة</h5>
+                        <h5 class="modal-title" id="teacherModalTitle">إضافة اخصائي</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body" id="teacherModalBody">
@@ -270,7 +271,7 @@
             if (snapshot.exists()) {
                 const data = snapshot.val();
                 teachers = data.teachers || [];
-                // تأكد من وجود monthlyPoints لكل معلمة (للتوافق مع الإصدارات السابقة)
+                // تأكد من وجود monthlyPoints لكل اخصائي (للتوافق مع الإصدارات السابقة)
                 teachers.forEach(t => {
                     if (!t.monthlyPoints) t.monthlyPoints = {};
                 });
@@ -298,7 +299,7 @@
         }
     }
 
-    // تسجيل الدخول التلقائي للمعلمة
+    // تسجيل الدخول التلقائي للاخصائي
     async function autoLoginTeacher() {
     if (currentTeacherId) {
         let teacher = teachers.find(t => t.id == currentTeacherId);
@@ -306,7 +307,7 @@
             showTeacherPanel(teacher);
             return true;
         } else {
-            // إذا لم نجد المعلمة، نُفرغ currentTeacherId
+            // إذا لم نجد الاخصائي، نُفرغ currentTeacherId
             currentTeacherId = null;
             await saveData();
         }
@@ -351,7 +352,7 @@
     function renderAdminContent(view, data) {
         let contentDiv = document.getElementById('adminContent');
         if (view === 'main') {
-            let html = '<h4>قائمة المعلمات</h4><table class="table table-bordered"><thead><tr><th>الاسم</th><th>اليوزر</th><th>الراتب</th><th>الإجراءات</th></tr></thead><tbody>';
+            let html = '<h4>قائمة الاخصائين</h4><table class="table table-bordered"><thead><tr><th>الاسم</th><th>اليوزر</th><th>الراتب</th><th>الإجراءات</th></tr></thead><tbody>';
             teachers.forEach(t => {
                 html += `<tr><td>${t.name}</td><td>${t.username}</td><td>${t.baseSalary}</td>
                     <td><button class="btn btn-sm btn-warning" onclick="editTeacher('${t.id}')">تعديل</button>
@@ -371,7 +372,7 @@
     };
 
     window.deleteTeacher = async function(id) {
-        if (confirm('هل أنت متأكد من حذف المعلمة؟')) {
+        if (confirm('هل أنت متأكد من حذف الاخصائي؟')) {
             teachers = teachers.filter(t => t.id != id);
             await saveData();
             renderAdminContent('main');
@@ -379,7 +380,7 @@
     };
 
     function showTeacherModal(teacher = null) {
-        document.getElementById('teacherModalTitle').innerText = teacher ? 'تعديل معلمة' : 'إضافة معلمة';
+        document.getElementById('teacherModalTitle').innerText = teacher ? 'تعديل اخصائي' : 'إضافة اخصائي';
         let body = `
             <input type="hidden" id="teacherId" value="${teacher ? teacher.id : ''}">
             <div class="mb-2"><label>الاسم</label><input class="form-control" id="teacherName" value="${teacher ? teacher.name : ''}"></div>
@@ -423,7 +424,7 @@
         renderAdminContent('main');
     });
 
-    // ======================== حضور وانصراف المعلمة ========================
+    // ======================== حضور وانصراف الاخصائي ========================
     function renderTeacherCalendar(teacher) {
         let days = getWorkingDaysInMonth(currentYear, currentMonth);
         let html = '<h5>أيام العمل لهذا الشهر</h5><table class="table table-sm table-bordered"><thead><tr><th>التاريخ</th><th>الحضور</th><th>الانصراف</th><th>تأخير</th><th>مبكر</th><th>إضافي</th></tr></thead><tbody>';
@@ -523,7 +524,7 @@
     }
 
     document.getElementById('summaryReportBtn').addEventListener('click', function() {
-        let html = '<h4>ملخص سجل الحضور والانصراف</h4><table class="table table-striped" id="summaryTable"><thead><tr><th>المعلمة</th><th>أيام العمل</th><th>تأخير (د)</th><th>مبكر (د)</th><th>إضافي (د)</th><th>النقاط</th><th>الراتب المستحق</th></tr></thead><tbody>';
+        let html = '<h4>ملخص سجل الحضور والانصراف</h4><table class="table table-striped" id="summaryTable"><thead><tr><th>الاخصائي</th><th>أيام العمل</th><th>تأخير (د)</th><th>مبكر (د)</th><th>إضافي (د)</th><th>النقاط</th><th>الراتب المستحق</th></tr></thead><tbody>';
         teachers.forEach(t => {
             let sum = calculateTeacherSummary(t, currentMonth, currentYear);
             html += `<tr><td>${t.name}</td><td>${sum.totalDays}</td><td>${sum.totalDelay}</td><td>${sum.totalEarly}</td><td>${sum.totalExtra}</td><td>${sum.totalPoints}</td><td>${sum.finalSalary.toFixed(2)}</td></tr>`;
@@ -571,7 +572,7 @@
 
     // ======================== تعديل التسجيلات (مع دعم النقاط الشهرية) ========================
     document.getElementById('editAttendanceBtn').addEventListener('click', function() {
-        let html = '<h4>تعديل تسجيلات الحضور</h4><div class="row"><div class="col-4">اختر المعلمة: <select id="editTeacherSelect" class="form-select">';
+        let html = '<h4>تعديل تسجيلات الحضور</h4><div class="row"><div class="col-4">اختر الاخصائي: <select id="editTeacherSelect" class="form-select">';
         teachers.forEach(t => html += `<option value="${t.id}">${t.name}</option>`);
         html += '</select></div><div class="col-4">اختر اليوم: <input type="date" id="editDate" class="form-control"></div><div class="col-4"><button class="btn btn-primary mt-4" id="loadEdit">عرض</button></div></div>';
         html += '<div id="editArea"></div>';
@@ -672,7 +673,7 @@
             reader.onload = async function(ev) {
                 let data = JSON.parse(ev.target.result);
                 teachers = data.teachers || [];
-                // تأكد من وجود monthlyPoints لكل معلمة بعد الاستعادة
+                // تأكد من وجود monthlyPoints لكل اخصائي بعد الاستعادة
                 teachers.forEach(t => {
                     if (!t.monthlyPoints) t.monthlyPoints = {};
                 });
