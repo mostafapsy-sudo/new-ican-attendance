@@ -201,106 +201,113 @@
         </div>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
-    <script type="module">
-    // ======================== إعداد Firebase ========================
     
-        const firebaseConfig = {
-            apiKey: "AIzaSyA5btGtTXfLti7vipnCgkv0Zy2-ry8lxME",
-            authDomain: "anas-attedendence-2.firebaseapp.com",
-            databaseURL: "https://anas-attedendence-2-default-rtdb.firebaseio.com",
-            projectId: "anas-attedendence-2",
-            storageBucket: "anas-attedendence-2.firebasestorage.app",
-            messagingSenderId: "474174822973",
-            appId: "1:474174822973:web:b7df045425c88270c46854"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
-    // ======================== البيانات العامة ========================
-    let teachers = [];
-    let adminPassword = "1234"; // القيمة الافتراضية
-    let currentTeacherId = null;
-    let currentMonth = new Date().getMonth();
-    let currentYear = new Date().getFullYear();
+    <script type="module">
+// ======================== إعداد Firebase (الوضع المعياري) مع CDN ========================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getDatabase, ref, get, set, child } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-    // دالة مساعدة لتنسيق التاريخ محلياً (بدون تأثير UTC)
-    function formatDateLocal(date) {
-        let year = date.getFullYear();
-        let month = (date.getMonth() + 1).toString().padStart(2, '0');
-        let day = date.getDate().toString().padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    }
+const firebaseConfig = {
+  apiKey: "AIzaSyCGEVaUoNLHtcj5AGgAeU3ROEUlRTgXkhk",
+  authDomain: "ican-new-attendnce.firebaseapp.com",
+  projectId: "ican-new-attendnce",
+  storageBucket: "ican-new-attendnce.firebasestorage.app",
+  messagingSenderId: "202167271707",
+  appId: "1:202167271707:web:763e690ce203b1f83d53be",
+  measurementId: "G-76E3WTDVCJ"
+};
 
-    // دوال مساعدة للأيام (نفسها)
-    function getWorkingDaysInMonth(year, month) {
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app); // كائن قاعدة البيانات
+
+// ======================== باقي الكود (كما هو) ========================
+// ... (جميع الدوال والمنطق السابق) ...
+
+// ======================== البيانات العامة ========================
+let teachers = [];
+let adminPassword = "1234"; // القيمة الافتراضية
+let currentTeacherId = null;
+let currentMonth = new Date().getMonth();
+let currentYear = new Date().getFullYear();
+
+// دالة مساعدة لتنسيق التاريخ محلياً
+function formatDateLocal(date) {
+    let year = date.getFullYear();
+    let month = (date.getMonth() + 1).toString().padStart(2, '0');
+    let day = date.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+// الحصول على أيام العمل في الشهر (باستثناء الجمعة والسبت)
+function getWorkingDaysInMonth(year, month) {
     let days = [];
     let lastDay = new Date(year, month + 1, 0).getDate();
     for (let d = 1; d <= lastDay; d++) {
         let currentDate = new Date(year, month, d);
-        let dayOfWeek = currentDate.getDay();
+        let dayOfWeek = currentDate.getDay(); // 0 الأحد, 5 الجمعة, 6 السبت
         if (dayOfWeek !== 5 && dayOfWeek !== 6) {
             days.push(currentDate);
         }
     }
     return days;
 }
-    function timeToMinutes(timeStr) {
-        if (!timeStr) return null;
-        let parts = timeStr.split(':');
-        return parseInt(parts[0]) * 60 + parseInt(parts[1]);
-    }
 
-    function getDailyRate(teacher, year, month) {
-        let workingDays = getWorkingDaysInMonth(year, month).length;
-        return teacher.baseSalary / workingDays;
-    }
+function timeToMinutes(timeStr) {
+    if (!timeStr) return null;
+    let parts = timeStr.split(':');
+    return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+}
 
-    function getMinuteRate(teacher, year, month) {
-        let start = timeToMinutes(teacher.workStartTime);
-        let end = timeToMinutes(teacher.workEndTime);
-        if (!start || !end || end <= start) return 0;
-        let shiftMinutes = end - start;
-        return getDailyRate(teacher, year, month) / shiftMinutes;
-    }
+function getDailyRate(teacher, year, month) {
+    let workingDays = getWorkingDaysInMonth(year, month).length;
+    return teacher.baseSalary / workingDays;
+}
 
-    // ======================== دوال Firebase ========================
-    async function loadData() {
-        try {
-            const snapshot = await get(child(ref(db), '/'));
-            if (snapshot.exists()) {
-                const data = snapshot.val();
-                teachers = data.teachers || [];
-                // تأكد من وجود monthlyPoints لكل اخصائي (للتوافق مع الإصدارات السابقة)
-                teachers.forEach(t => {
-                    if (!t.monthlyPoints) t.monthlyPoints = {};
-                });
-                adminPassword = data.adminPassword || '1234';
-                currentTeacherId = data.currentTeacherId || null;
-            } else {
-                teachers = [];
-                adminPassword = '1234';
-                currentTeacherId = null;
-            }
-        } catch (error) {
-            console.error("خطأ في تحميل البيانات:", error);
-        }
-    }
+function getMinuteRate(teacher, year, month) {
+    let start = timeToMinutes(teacher.workStartTime);
+    let end = timeToMinutes(teacher.workEndTime);
+    if (!start || !end || end <= start) return 0;
+    let shiftMinutes = end - start;
+    return getDailyRate(teacher, year, month) / shiftMinutes;
+}
 
-    async function saveData() {
-        try {
-            await set(ref(db, '/'), {
-                teachers: teachers,
-                adminPassword: adminPassword,
-                currentTeacherId: currentTeacherId
+// ======================== دوال Firebase ========================
+async function loadData() {
+    try {
+        const dbRef = ref(db);
+        const snapshot = await get(child(dbRef, '/'));
+        if (snapshot.exists()) {
+            const data = snapshot.val();
+            teachers = data.teachers || [];
+            teachers.forEach(t => {
+                if (!t.monthlyPoints) t.monthlyPoints = {};
             });
-        } catch (error) {
-            console.error("خطأ في حفظ البيانات:", error);
+            adminPassword = data.adminPassword || '1234';
+            currentTeacherId = data.currentTeacherId || null;
+        } else {
+            teachers = [];
+            adminPassword = '1234';
+            currentTeacherId = null;
         }
+    } catch (error) {
+        console.error("خطأ في تحميل البيانات:", error);
     }
+}
 
-    // تسجيل الدخول التلقائي للاخصائي
-    async function autoLoginTeacher() {
+async function saveData() {
+    try {
+        await set(ref(db, '/'), {
+            teachers: teachers,
+            adminPassword: adminPassword,
+            currentTeacherId: currentTeacherId
+        });
+    } catch (error) {
+        console.error("خطأ في حفظ البيانات:", error);
+    }
+}
+
+// تسجيل الدخول التلقائي للاخصائي
+async function autoLoginTeacher() {
     if (currentTeacherId) {
         let teacher = teachers.find(t => t.id == currentTeacherId);
         if (teacher) {
@@ -314,426 +321,408 @@
     }
     return false;
 }
+
 // ======================== إظهار وإخفاء الشاشات ========================
-    function showMain() {
-        document.getElementById('mainScreen').classList.remove('hidden');
-        document.getElementById('adminLoginScreen').classList.add('hidden');
-        document.getElementById('teacherLoginScreen').classList.add('hidden');
-        document.getElementById('adminPanel').classList.add('hidden');
-        document.getElementById('teacherPanel').classList.add('hidden');
-    }
-    function showAdminLogin() {
-        document.getElementById('mainScreen').classList.add('hidden');
-        document.getElementById('adminLoginScreen').classList.remove('hidden');
-        document.getElementById('teacherLoginScreen').classList.add('hidden');
-    }
-    function showTeacherLogin() {
-        document.getElementById('mainScreen').classList.add('hidden');
-        document.getElementById('teacherLoginScreen').classList.remove('hidden');
-        document.getElementById('adminLoginScreen').classList.add('hidden');
-    }
-    function showAdminPanel() {
-        document.getElementById('mainScreen').classList.add('hidden');
-        document.getElementById('adminLoginScreen').classList.add('hidden');
-        document.getElementById('adminPanel').classList.remove('hidden');
-        document.getElementById('teacherPanel').classList.add('hidden');
-        renderAdminContent('main');
-    }
-    function showTeacherPanel(teacher) {
-        document.getElementById('mainScreen').classList.add('hidden');
-        document.getElementById('teacherLoginScreen').classList.add('hidden');
-        document.getElementById('teacherPanel').classList.remove('hidden');
-        document.getElementById('adminPanel').classList.add('hidden');
-        document.getElementById('teacherNameDisplay').innerText = teacher.name;
-        renderTeacherCalendar(teacher);
-    }
+function showMain() {
+    document.getElementById('mainScreen').classList.remove('hidden');
+    document.getElementById('adminLoginScreen').classList.add('hidden');
+    document.getElementById('teacherLoginScreen').classList.add('hidden');
+    document.getElementById('adminPanel').classList.add('hidden');
+    document.getElementById('teacherPanel').classList.add('hidden');
+}
 
-    // ======================== إدارة الإضافة والتعديل ========================
-    function renderAdminContent(view, data) {
-        let contentDiv = document.getElementById('adminContent');
-        if (view === 'main') {
-            let html = '<h4>قائمة الاخصائين</h4><table class="table table-bordered"><thead><tr><th>الاسم</th><th>اليوزر</th><th>الراتب</th><th>الإجراءات</th></tr></thead><tbody>';
-            teachers.forEach(t => {
-                html += `<tr><td>${t.name}</td><td>${t.username}</td><td>${t.baseSalary}</td>
-                    <td><button class="btn btn-sm btn-warning" onclick="editTeacher('${t.id}')">تعديل</button>
-                    <button class="btn btn-sm btn-danger" onclick="deleteTeacher('${t.id}')">حذف</button></td></tr>`;
-            });
-            html += '</tbody></table>';
-            contentDiv.innerHTML = html;
-        } else if (view === 'addTeacher') {
-            showTeacherModal();
-        }
+function showAdminLogin() {
+    document.getElementById('mainScreen').classList.add('hidden');
+    document.getElementById('adminLoginScreen').classList.remove('hidden');
+    document.getElementById('teacherLoginScreen').classList.add('hidden');
+}
+
+function showTeacherLogin() {
+    document.getElementById('mainScreen').classList.add('hidden');
+    document.getElementById('teacherLoginScreen').classList.remove('hidden');
+    document.getElementById('adminLoginScreen').classList.add('hidden');
+}
+
+function showAdminPanel() {
+    document.getElementById('mainScreen').classList.add('hidden');
+    document.getElementById('adminLoginScreen').classList.add('hidden');
+    document.getElementById('adminPanel').classList.remove('hidden');
+    document.getElementById('teacherPanel').classList.add('hidden');
+    renderAdminContent('main');
+}
+
+function showTeacherPanel(teacher) {
+    document.getElementById('mainScreen').classList.add('hidden');
+    document.getElementById('teacherLoginScreen').classList.add('hidden');
+    document.getElementById('teacherPanel').classList.remove('hidden');
+    document.getElementById('adminPanel').classList.add('hidden');
+    document.getElementById('teacherNameDisplay').innerText = teacher.name;
+    renderTeacherCalendar(teacher);
+}
+
+// ======================== إدارة الإضافة والتعديل ========================
+function renderAdminContent(view, data) {
+    let contentDiv = document.getElementById('adminContent');
+    if (view === 'main') {
+        let html = '<h4>قائمة الاخصائين</h4><table class="table table-bordered"><thead><tr><th>الاسم</th><th>اليوزر</th><th>الراتب</th><th>الإجراءات</th></tr></thead><tbody>';
+        teachers.forEach(t => {
+            html += `<tr><td>${t.name}</td><td>${t.username}</td><td>${t.baseSalary}</td>
+                <td><button class="btn btn-sm btn-warning" onclick="editTeacher('${t.id}')">تعديل</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteTeacher('${t.id}')">حذف</button></td></tr>`;
+        });
+        html += '</tbody></table>';
+        contentDiv.innerHTML = html;
+    } else if (view === 'addTeacher') {
+        showTeacherModal();
     }
+}
 
-    window.editTeacher = function(id) {
-        let teacher = teachers.find(t => t.id == id);
-        if (!teacher) return;
-        showTeacherModal(teacher);
-    };
+// دوال تعديل وحذف يجب تعريفها على النافذة لأنها تستخدم من onclick في HTML الديناميكي
+window.editTeacher = function(id) {
+    let teacher = teachers.find(t => t.id == id);
+    if (!teacher) return;
+    showTeacherModal(teacher);
+};
 
-    window.deleteTeacher = async function(id) {
-        if (confirm('هل أنت متأكد من حذف الاخصائي؟')) {
-            teachers = teachers.filter(t => t.id != id);
-            await saveData();
-            renderAdminContent('main');
-        }
-    };
-
-    function showTeacherModal(teacher = null) {
-        document.getElementById('teacherModalTitle').innerText = teacher ? 'تعديل اخصائي' : 'إضافة اخصائي';
-        let body = `
-            <input type="hidden" id="teacherId" value="${teacher ? teacher.id : ''}">
-            <div class="mb-2"><label>الاسم</label><input class="form-control" id="teacherName" value="${teacher ? teacher.name : ''}"></div>
-            <div class="mb-2"><label>تاريخ العمل</label><input type="date" class="form-control" id="hireDate" value="${teacher ? teacher.hireDate : ''}"></div>
-            <div class="mb-2"><label>المؤهل</label><input class="form-control" id="qualification" value="${teacher ? teacher.qualification : ''}"></div>
-            <div class="mb-2"><label>التوصيف الوظيفي</label><input class="form-control" id="jobDesc" value="${teacher ? teacher.jobDescription : ''}"></div>
-            <div class="mb-2"><label>وقت الحضور (مثال 08:00)</label><input type="time" class="form-control" id="workStart" value="${teacher ? teacher.workStartTime : '08:00'}"></div>
-            <div class="mb-2"><label>وقت الانصراف</label><input type="time" class="form-control" id="workEnd" value="${teacher ? teacher.workEndTime : '15:00'}"></div>
-            <div class="mb-2"><label>اسم المستخدم</label><input class="form-control" id="username" value="${teacher ? teacher.username : ''}"></div>
-            <div class="mb-2"><label>كلمة المرور</label><input class="form-control" id="password" value="${teacher ? teacher.password : ''}"></div>
-            <div class="mb-2"><label>الراتب الشهري</label><input type="number" class="form-control" id="salary" value="${teacher ? teacher.baseSalary : ''}"></div>
-        `;
-        document.getElementById('teacherModalBody').innerHTML = body;
-        new bootstrap.Modal(document.getElementById('teacherModal')).show();
-    }
-
-    document.getElementById('saveTeacherBtn').addEventListener('click', async function() {
-        let id = document.getElementById('teacherId').value;
-        let teacher = {
-            id: id || Date.now().toString(),
-            name: document.getElementById('teacherName').value,
-            hireDate: document.getElementById('hireDate').value,
-            qualification: document.getElementById('qualification').value,
-            jobDescription: document.getElementById('jobDesc').value,
-            workStartTime: document.getElementById('workStart').value,
-            workEndTime: document.getElementById('workEnd').value,
-            username: document.getElementById('username').value,
-            password: document.getElementById('password').value,
-            baseSalary: parseFloat(document.getElementById('salary').value) || 0,
-            attendance: [],
-            monthlyPoints: {} // تهيئة كائن النقاط الشهرية
-        };
-        if (id) {
-            let index = teachers.findIndex(t => t.id == id);
-            if (index !== -1) teachers[index] = { ...teachers[index], ...teacher, monthlyPoints: teachers[index].monthlyPoints || {} };
-        } else {
-            teachers.push(teacher);
-        }
+window.deleteTeacher = async function(id) {
+    if (confirm('هل أنت متأكد من حذف الاخصائي؟')) {
+        teachers = teachers.filter(t => t.id != id);
         await saveData();
-        bootstrap.Modal.getInstance(document.getElementById('teacherModal')).hide();
         renderAdminContent('main');
-    });
+    }
+};
 
-    // ======================== حضور وانصراف الاخصائي ========================
-    function renderTeacherCalendar(teacher) {
+function showTeacherModal(teacher = null) {
+    document.getElementById('teacherModalTitle').innerText = teacher ? 'تعديل اخصائي' : 'إضافة اخصائي';
+    let body = `
+        <input type="hidden" id="teacherId" value="${teacher ? teacher.id : ''}">
+        <div class="mb-2"><label>الاسم</label><input class="form-control" id="teacherName" value="${teacher ? teacher.name : ''}"></div>
+        <div class="mb-2"><label>تاريخ العمل</label><input type="date" class="form-control" id="hireDate" value="${teacher ? teacher.hireDate : ''}"></div>
+        <div class="mb-2"><label>المؤهل</label><input class="form-control" id="qualification" value="${teacher ? teacher.qualification : ''}"></div>
+        <div class="mb-2"><label>التوصيف الوظيفي</label><input class="form-control" id="jobDesc" value="${teacher ? teacher.jobDescription : ''}"></div>
+        <div class="mb-2"><label>وقت الحضور (مثال 08:00)</label><input type="time" class="form-control" id="workStart" value="${teacher ? teacher.workStartTime : '08:00'}"></div>
+        <div class="mb-2"><label>وقت الانصراف</label><input type="time" class="form-control" id="workEnd" value="${teacher ? teacher.workEndTime : '15:00'}"></div>
+        <div class="mb-2"><label>اسم المستخدم</label><input class="form-control" id="username" value="${teacher ? teacher.username : ''}"></div>
+        <div class="mb-2"><label>كلمة المرور</label><input class="form-control" id="password" value="${teacher ? teacher.password : ''}"></div>
+        <div class="mb-2"><label>الراتب الشهري</label><input type="number" class="form-control" id="salary" value="${teacher ? teacher.baseSalary : ''}"></div>
+    `;
+    document.getElementById('teacherModalBody').innerHTML = body;
+    new bootstrap.Modal(document.getElementById('teacherModal')).show();
+}
+
+document.getElementById('saveTeacherBtn').addEventListener('click', async function() {
+    let id = document.getElementById('teacherId').value;
+    let teacher = {
+        id: id || Date.now().toString(),
+        name: document.getElementById('teacherName').value,
+        hireDate: document.getElementById('hireDate').value,
+        qualification: document.getElementById('qualification').value,
+        jobDescription: document.getElementById('jobDesc').value,
+        workStartTime: document.getElementById('workStart').value,
+        workEndTime: document.getElementById('workEnd').value,
+        username: document.getElementById('username').value,
+        password: document.getElementById('password').value,
+        baseSalary: parseFloat(document.getElementById('salary').value) || 0,
+        attendance: [],
+        monthlyPoints: {}
+    };
+    if (id) {
+        let index = teachers.findIndex(t => t.id == id);
+        if (index !== -1) teachers[index] = { ...teachers[index], ...teacher, monthlyPoints: teachers[index].monthlyPoints || {} };
+    } else {
+        teachers.push(teacher);
+    }
+    await saveData();
+    bootstrap.Modal.getInstance(document.getElementById('teacherModal')).hide();
+    renderAdminContent('main');
+});
+
+// ======================== حضور وانصراف الاخصائي ========================
+function renderTeacherCalendar(teacher) {
+    let days = getWorkingDaysInMonth(currentYear, currentMonth);
+    let html = '<h5>أيام العمل لهذا الشهر</h5><table class="table table-sm table-bordered"><thead><tr><th>التاريخ</th><th>الحضور</th><th>الانصراف</th><th>تأخير</th><th>مبكر</th><th>إضافي</th></tr></thead><tbody>';
+    days.forEach(day => {
+        let dateStr = formatDateLocal(day);
+        let att = teacher.attendance ? teacher.attendance.find(a => a.date === dateStr) : null;
+        let checkIn = att ? att.checkIn : '';
+        let checkOut = att ? att.checkOut : '';
+        let delay = 0, early = 0, extra = 0;
+        if (checkIn && teacher.workStartTime) {
+            let inMin = timeToMinutes(checkIn);
+            let startMin = timeToMinutes(teacher.workStartTime);
+            if (inMin > startMin + 5) delay = inMin - startMin;
+        }
+        if (checkOut && teacher.workEndTime) {
+            let outMin = timeToMinutes(checkOut);
+            let endMin = timeToMinutes(teacher.workEndTime);
+            if (outMin < endMin - 5) early = endMin - outMin;
+            else if (outMin > endMin) extra = outMin - endMin;
+        }
+        html += `<tr><td>${dateStr}</td><td>${checkIn || '—'}</td><td>${checkOut || '—'}</td><td>${delay} د</td><td>${early} د</td><td>${extra} د</td></tr>`;
+    });
+    html += '</tbody></table>';
+    document.getElementById('teacherMonthDisplay').innerHTML = html;
+}
+
+document.getElementById('checkInBtn').addEventListener('click', async function() {
+    if (!currentTeacherId) return;
+    let teacher = teachers.find(t => t.id == currentTeacherId);
+    if (!teacher) return;
+    let today = formatDateLocal(new Date());
+    let dayOfWeek = new Date().getDay();
+    if (dayOfWeek === 5 || dayOfWeek === 6) { alert('اليوم عطلة'); return; }
+    let att = teacher.attendance || [];
+    let existing = att.find(a => a.date === today);
+    if (existing) {
+        if (existing.checkIn) { alert('تم تسجيل الحضور مسبقاً'); return; }
+    }
+    let now = new Date();
+    let timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+    if (!existing) {
+        att.push({ date: today, checkIn: timeStr, checkOut: null });
+    } else {
+        existing.checkIn = timeStr;
+    }
+    teacher.attendance = att;
+    await saveData();
+    renderTeacherCalendar(teacher);
+});
+
+document.getElementById('checkOutBtn').addEventListener('click', async function() {
+    if (!currentTeacherId) return;
+    let teacher = teachers.find(t => t.id == currentTeacherId);
+    if (!teacher) return;
+    let today = formatDateLocal(new Date());
+    let att = teacher.attendance || [];
+    let existing = att.find(a => a.date === today);
+    if (!existing || !existing.checkIn) { alert('يجب تسجيل الحضور أولاً'); return; }
+    if (existing.checkOut) { alert('تم تسجيل الانصراف مسبقاً'); return; }
+    let now = new Date();
+    let timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+    existing.checkOut = timeStr;
+    teacher.attendance = att;
+    await saveData();
+    renderTeacherCalendar(teacher);
+});
+
+// ======================== تقارير (مع دعم النقاط الشهرية) ========================
+function calculateTeacherSummary(teacher, month, year) {
+    let days = getWorkingDaysInMonth(year, month);
+    let dailyRate = getDailyRate(teacher, year, month);
+    let minuteRate = getMinuteRate(teacher, year, month);
+    let totalDays = 0, totalDelay = 0, totalEarly = 0, totalExtra = 0;
+    let monthKey = `${year}-${(month+1).toString().padStart(2,'0')}`;
+    let totalPoints = (teacher.monthlyPoints && teacher.monthlyPoints[monthKey]) || 0;
+
+    days.forEach(day => {
+        let dateStr = formatDateLocal(day);
+        let att = teacher.attendance ? teacher.attendance.find(a => a.date === dateStr) : null;
+        if (att && att.checkIn && att.checkOut) {
+            totalDays++;
+            let inMin = timeToMinutes(att.checkIn);
+            let outMin = timeToMinutes(att.checkOut);
+            let startMin = timeToMinutes(teacher.workStartTime);
+            let endMin = timeToMinutes(teacher.workEndTime);
+            if (inMin > startMin + 5) totalDelay += inMin - startMin;
+            if (outMin < endMin - 5) totalEarly += endMin - outMin;
+            if (outMin > endMin) totalExtra += outMin - endMin;
+        }
+    });
+    let basePay = totalDays * dailyRate;
+    let adjustments = (totalExtra - totalDelay - totalEarly) * minuteRate;
+    let pointsValue = totalPoints * (dailyRate / 20); // نقطة = 1/20 من أجر اليوم
+    let finalSalary = basePay + adjustments + pointsValue;
+    return { totalDays, totalDelay, totalEarly, totalExtra, totalPoints, basePay, adjustments, pointsValue, finalSalary };
+}
+
+document.getElementById('summaryReportBtn').addEventListener('click', function() {
+    let html = '<h4>ملخص سجل الحضور والانصراف</h4><table class="table table-striped" id="summaryTable"><thead><tr><th>الاخصائي</th><th>أيام العمل</th><th>تأخير (د)</th><th>مبكر (د)</th><th>إضافي (د)</th><th>النقاط</th><th>الراتب المستحق</th></tr></thead><tbody>';
+    teachers.forEach(t => {
+        let sum = calculateTeacherSummary(t, currentMonth, currentYear);
+        html += `<tr><td>${t.name}</td><td>${sum.totalDays}</td><td>${sum.totalDelay}</td><td>${sum.totalEarly}</td><td>${sum.totalExtra}</td><td>${sum.totalPoints}</td><td>${sum.finalSalary.toFixed(2)}</td></tr>`;
+    });
+    html += '</tbody></table><button class="btn btn-primary" onclick="printPDF(\'summaryTable\')">طباعة PDF</button>';
+    document.getElementById('adminContent').innerHTML = html;
+});
+
+document.getElementById('detailedReportBtn').addEventListener('click', function() {
+    let html = '<h4>التقرير التفصيلي</h4>';
+    teachers.forEach(t => {
         let days = getWorkingDaysInMonth(currentYear, currentMonth);
-        let html = '<h5>أيام العمل لهذا الشهر</h5><table class="table table-sm table-bordered"><thead><tr><th>التاريخ</th><th>الحضور</th><th>الانصراف</th><th>تأخير</th><th>مبكر</th><th>إضافي</th></tr></thead><tbody>';
+        html += `<h5>${t.name}</h5><table class="table table-sm table-bordered"><thead><tr><th>التاريخ</th><th>حضور</th><th>انصراف</th><th>تأخير</th><th>مبكر</th><th>إضافي</th></tr></thead><tbody>`;
         days.forEach(day => {
             let dateStr = formatDateLocal(day);
-            let att = teacher.attendance ? teacher.attendance.find(a => a.date === dateStr) : null;
+            let att = t.attendance ? t.attendance.find(a => a.date === dateStr) : null;
             let checkIn = att ? att.checkIn : '';
             let checkOut = att ? att.checkOut : '';
             let delay = 0, early = 0, extra = 0;
-            if (checkIn && teacher.workStartTime) {
+            if (checkIn && t.workStartTime) {
                 let inMin = timeToMinutes(checkIn);
-                let startMin = timeToMinutes(teacher.workStartTime);
+                let startMin = timeToMinutes(t.workStartTime);
                 if (inMin > startMin + 5) delay = inMin - startMin;
             }
-            if (checkOut && teacher.workEndTime) {
+            if (checkOut && t.workEndTime) {
                 let outMin = timeToMinutes(checkOut);
-                let endMin = timeToMinutes(teacher.workEndTime);
+                let endMin = timeToMinutes(t.workEndTime);
                 if (outMin < endMin - 5) early = endMin - outMin;
                 else if (outMin > endMin) extra = outMin - endMin;
             }
-            html += `<tr><td>${dateStr}</td><td>${checkIn || '—'}</td><td>${checkOut || '—'}</td><td>${delay} د</td><td>${early} د</td><td>${extra} د</td></tr>`;
+            html += `<tr><td>${dateStr}</td><td>${checkIn || '—'}</td><td>${checkOut || '—'}</td><td>${delay}</td><td>${early}</td><td>${extra}</td></tr>`;
         });
+        let sum = calculateTeacherSummary(t, currentMonth, currentYear);
+        html += `<tr><td colspan="6"><strong>الإجمالي: أيام ${sum.totalDays}, النقاط: ${sum.totalPoints}, الراتب المستحق: ${sum.finalSalary.toFixed(2)}</strong></td></tr>`;
         html += '</tbody></table>';
-        document.getElementById('teacherMonthDisplay').innerHTML = html;
-    }
-
-    document.getElementById('checkInBtn').addEventListener('click', async function() {
-        if (!currentTeacherId) return;
-        let teacher = teachers.find(t => t.id == currentTeacherId);
-        if (!teacher) return;
-        let today = formatDateLocal(new Date());
-        let dayOfWeek = new Date().getDay();
-        if (dayOfWeek === 5 || dayOfWeek === 6) { alert('اليوم عطلة'); return; }
-        let att = teacher.attendance || [];
-        let existing = att.find(a => a.date === today);
-        if (existing) {
-            if (existing.checkIn) { alert('تم تسجيل الحضور مسبقاً'); return; }
-        }
-        let now = new Date();
-        let timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
-        if (!existing) {
-            att.push({ date: today, checkIn: timeStr, checkOut: null });
-        } else {
-            existing.checkIn = timeStr;
-        }
-        teacher.attendance = att;
-        await saveData();
-        renderTeacherCalendar(teacher);
     });
+    html += '<button class="btn btn-primary" onclick="window.print()">طباعة PDF</button>';
+    document.getElementById('adminContent').innerHTML = html;
+});
 
-    document.getElementById('checkOutBtn').addEventListener('click', async function() {
-        if (!currentTeacherId) return;
-        let teacher = teachers.find(t => t.id == currentTeacherId);
+window.printPDF = function(elementId) {
+    const element = document.getElementById(elementId);
+    html2pdf().from(element).save();
+};
+
+// ======================== تعديل التسجيلات (مع دعم النقاط الشهرية) ========================
+document.getElementById('editAttendanceBtn').addEventListener('click', function() {
+    let html = '<h4>تعديل تسجيلات الحضور</h4><div class="row"><div class="col-4">اختر الاخصائي: <select id="editTeacherSelect" class="form-select">';
+    teachers.forEach(t => html += `<option value="${t.id}">${t.name}</option>`);
+    html += '</select></div><div class="col-4">اختر اليوم: <input type="date" id="editDate" class="form-control"></div><div class="col-4"><button class="btn btn-primary mt-4" id="loadEdit">عرض</button></div></div>';
+    html += '<div id="editArea"></div>';
+    document.getElementById('adminContent').innerHTML = html;
+    document.getElementById('loadEdit').addEventListener('click', function() {
+        let teacherId = document.getElementById('editTeacherSelect').value;
+        let date = document.getElementById('editDate').value;
+        if (!teacherId || !date) return;
+        let teacher = teachers.find(t => t.id == teacherId);
         if (!teacher) return;
-        let today = formatDateLocal(new Date());
-        let att = teacher.attendance || [];
-        let existing = att.find(a => a.date === today);
-        if (!existing || !existing.checkIn) { alert('يجب تسجيل الحضور أولاً'); return; }
-        if (existing.checkOut) { alert('تم تسجيل الانصراف مسبقاً'); return; }
-        let now = new Date();
-        let timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
-        existing.checkOut = timeStr;
-        teacher.attendance = att;
-        await saveData();
-        renderTeacherCalendar(teacher);
-    });
+        let att = teacher.attendance ? teacher.attendance.find(a => a.date === date) : null;
+        let area = document.getElementById('editArea');
+        let [year, month] = date.split('-');
+        let monthKey = `${year}-${month}`;
+        let currentPoints = (teacher.monthlyPoints && teacher.monthlyPoints[monthKey]) || 0;
 
-    // ======================== تقارير (مع دعم النقاط الشهرية) ========================
-    function calculateTeacherSummary(teacher, month, year) {
-        let days = getWorkingDaysInMonth(year, month);
-        let dailyRate = getDailyRate(teacher, year, month);
-        let minuteRate = getMinuteRate(teacher, year, month);
-        let totalDays = 0, totalDelay = 0, totalEarly = 0, totalExtra = 0;
-        // النقاط الخاصة بهذا الشهر
-        let monthKey = `${year}-${(month+1).toString().padStart(2,'0')}`;
-        let totalPoints = (teacher.monthlyPoints && teacher.monthlyPoints[monthKey]) || 0;
+        area.innerHTML = `
+            <hr><h6>تعديل يوم ${date}</h6>
+            <div class="row">
+                <div class="col-3">حضور: <input type="time" id="editIn" value="${att?.checkIn || ''}"></div>
+                <div class="col-3">انصراف: <input type="time" id="editOut" value="${att?.checkOut || ''}"></div>
+                <div class="col-3"><button class="btn btn-success" id="saveEditDay">حفظ</button></div>
+            </div>
+            <hr><h6>إضافة/خصم نقاط</h6>
+            <div class="row">
+                <div class="col-3"><input type="number" id="pointsInput" placeholder="نقاط (موجب/سالب)" value="0"></div>
+                <div class="col-3"><button class="btn btn-warning" id="applyPoints">تطبيق نقاط</button></div>
+            </div>
+            <div class="mt-2">النقاط الحالية لهذا الشهر: <strong>${currentPoints}</strong></div>
+        `;
 
-        days.forEach(day => {
-            let dateStr = formatDateLocal(day);
-            let att = teacher.attendance ? teacher.attendance.find(a => a.date === dateStr) : null;
-            if (att && att.checkIn && att.checkOut) {
-                totalDays++;
-                let inMin = timeToMinutes(att.checkIn);
-                let outMin = timeToMinutes(att.checkOut);
-                let startMin = timeToMinutes(teacher.workStartTime);
-                let endMin = timeToMinutes(teacher.workEndTime);
-                if (inMin > startMin + 5) totalDelay += inMin - startMin;
-                if (outMin < endMin - 5) totalEarly += endMin - outMin;
-                if (outMin > endMin) totalExtra += outMin - endMin;
+        document.getElementById('saveEditDay').addEventListener('click', async function() {
+            let inVal = document.getElementById('editIn').value;
+            let outVal = document.getElementById('editOut').value;
+            if (!teacher.attendance) teacher.attendance = [];
+            let existingIndex = teacher.attendance.findIndex(a => a.date === date);
+            if (existingIndex >= 0) {
+                teacher.attendance[existingIndex] = { date, checkIn: inVal, checkOut: outVal };
+            } else {
+                teacher.attendance.push({ date, checkIn: inVal, checkOut: outVal });
             }
+            await saveData();
+            alert('تم الحفظ');
         });
-        let basePay = totalDays * dailyRate;
-        let adjustments = (totalExtra - totalDelay - totalEarly) * minuteRate;
-        let pointsValue = totalPoints * (dailyRate / 20); // نقطة = 1/20 من أجر اليوم
-        let finalSalary = basePay + adjustments + pointsValue;
-        return { totalDays, totalDelay, totalEarly, totalExtra, totalPoints, basePay, adjustments, pointsValue, finalSalary };
-    }
 
-    document.getElementById('summaryReportBtn').addEventListener('click', function() {
-        let html = '<h4>ملخص سجل الحضور والانصراف</h4><table class="table table-striped" id="summaryTable"><thead><tr><th>الاخصائي</th><th>أيام العمل</th><th>تأخير (د)</th><th>مبكر (د)</th><th>إضافي (د)</th><th>النقاط</th><th>الراتب المستحق</th></tr></thead><tbody>';
-        teachers.forEach(t => {
-            let sum = calculateTeacherSummary(t, currentMonth, currentYear);
-            html += `<tr><td>${t.name}</td><td>${sum.totalDays}</td><td>${sum.totalDelay}</td><td>${sum.totalEarly}</td><td>${sum.totalExtra}</td><td>${sum.totalPoints}</td><td>${sum.finalSalary.toFixed(2)}</td></tr>`;
-        });
-        html += '</tbody></table><button class="btn btn-primary" onclick="printPDF(\'summaryTable\')">طباعة PDF</button>';
-        document.getElementById('adminContent').innerHTML = html;
-    });
-
-    document.getElementById('detailedReportBtn').addEventListener('click', function() {
-        let html = '<h4>التقرير التفصيلي</h4>';
-        teachers.forEach(t => {
-            let days = getWorkingDaysInMonth(currentYear, currentMonth);
-            html += `<h5>${t.name}</h5><table class="table table-sm table-bordered"><thead><tr><th>التاريخ</th><th>حضور</th><th>انصراف</th><th>تأخير</th><th>مبكر</th><th>إضافي</th></tr></thead><tbody>`;
-            days.forEach(day => {
-                let dateStr = formatDateLocal(day);
-                let att = t.attendance ? t.attendance.find(a => a.date === dateStr) : null;
-                let checkIn = att ? att.checkIn : '';
-                let checkOut = att ? att.checkOut : '';
-                let delay = 0, early = 0, extra = 0;
-                if (checkIn && t.workStartTime) {
-                    let inMin = timeToMinutes(checkIn);
-                    let startMin = timeToMinutes(t.workStartTime);
-                    if (inMin > startMin + 5) delay = inMin - startMin;
-                }
-                if (checkOut && t.workEndTime) {
-                    let outMin = timeToMinutes(checkOut);
-                    let endMin = timeToMinutes(t.workEndTime);
-                    if (outMin < endMin - 5) early = endMin - outMin;
-                    else if (outMin > endMin) extra = outMin - endMin;
-                }
-                html += `<tr><td>${dateStr}</td><td>${checkIn || '—'}</td><td>${checkOut || '—'}</td><td>${delay}</td><td>${early}</td><td>${extra}</td></tr>`;
-            });
-            let sum = calculateTeacherSummary(t, currentMonth, currentYear);
-            html += `<tr><td colspan="6"><strong>الإجمالي: أيام ${sum.totalDays}, النقاط: ${sum.totalPoints}, الراتب المستحق: ${sum.finalSalary.toFixed(2)}</strong></td></tr>`;
-            html += '</tbody></table>';
-        });
-        html += '<button class="btn btn-primary" onclick="window.print()">طباعة PDF</button>';
-        document.getElementById('adminContent').innerHTML = html;
-    });
-
-    window.printPDF = function(elementId) {
-        const element = document.getElementById(elementId);
-        html2pdf().from(element).save();
-    };
-
-    // ======================== تعديل التسجيلات (مع دعم النقاط الشهرية) ========================
-    document.getElementById('editAttendanceBtn').addEventListener('click', function() {
-        let html = '<h4>تعديل تسجيلات الحضور</h4><div class="row"><div class="col-4">اختر الاخصائي: <select id="editTeacherSelect" class="form-select">';
-        teachers.forEach(t => html += `<option value="${t.id}">${t.name}</option>`);
-        html += '</select></div><div class="col-4">اختر اليوم: <input type="date" id="editDate" class="form-control"></div><div class="col-4"><button class="btn btn-primary mt-4" id="loadEdit">عرض</button></div></div>';
-        html += '<div id="editArea"></div>';
-        document.getElementById('adminContent').innerHTML = html;
-        document.getElementById('loadEdit').addEventListener('click', function() {
-            let teacherId = document.getElementById('editTeacherSelect').value;
-            let date = document.getElementById('editDate').value;
-            if (!teacherId || !date) return;
-            let teacher = teachers.find(t => t.id == teacherId);
-            if (!teacher) return;
-            let att = teacher.attendance ? teacher.attendance.find(a => a.date === date) : null;
-            let area = document.getElementById('editArea');
-            // مفتاح الشهر من التاريخ المحدد
-            let [year, month] = date.split('-');
-            let monthKey = `${year}-${month}`;
-            let currentPoints = (teacher.monthlyPoints && teacher.monthlyPoints[monthKey]) || 0;
-
-            area.innerHTML = `
-                <hr><h6>تعديل يوم ${date}</h6>
-                <div class="row">
-                    <div class="col-3">حضور: <input type="time" id="editIn" value="${att?.checkIn || ''}"></div>
-                    <div class="col-3">انصراف: <input type="time" id="editOut" value="${att?.checkOut || ''}"></div>
-                    <div class="col-3"><button class="btn btn-success" id="saveEditDay">حفظ</button></div>
-                </div>
-                <hr><h6>إضافة/خصم يوم أو نقاط</h6>
-                <div class="row">
-                    
-                    <div class="col-3"><input type="number" id="pointsInput" placeholder="نقاط (موجب/سالب)" value="0"></div>
-                    <div class="col-3"><button class="btn btn-warning" id="applyPoints">تطبيق نقاط</button></div>
-                </div>
-                <div class="mt-2">النقاط الحالية لهذا الشهر: <strong>${currentPoints}</strong></div>
-            `;
-
-            document.getElementById('saveEditDay').addEventListener('click', async function() {
-                let inVal = document.getElementById('editIn').value;
-                let outVal = document.getElementById('editOut').value;
-                if (!teacher.attendance) teacher.attendance = [];
-                let existingIndex = teacher.attendance.findIndex(a => a.date === date);
-                if (existingIndex >= 0) {
-                    teacher.attendance[existingIndex] = { date, checkIn: inVal, checkOut: outVal };
-                } else {
-                    teacher.attendance.push({ date, checkIn: inVal, checkOut: outVal });
-                }
-                await saveData();
-                alert('تم الحفظ');
-            });
-
-            document.getElementById('addWorkDay').addEventListener('click', async function() {
-                if (!teacher.attendance) teacher.attendance = [];
-                let existing = teacher.attendance.find(a => a.date === date);
-                if (!existing) {
-                    teacher.attendance.push({ date, checkIn: teacher.workStartTime, checkOut: teacher.workEndTime });
-                } else {
-                    existing.checkIn = teacher.workStartTime;
-                    existing.checkOut = teacher.workEndTime;
-                }
-                await saveData();
-                alert('تم إضافة يوم عمل كامل');
-            });
-
-            document.getElementById('deductWorkDay').addEventListener('click', async function() {
-                teacher.attendance = teacher.attendance.filter(a => a.date !== date);
-                await saveData();
-                alert('تم خصم اليوم');
-            });
-
-            document.getElementById('applyPoints').addEventListener('click', async function() {
-                let pts = parseInt(document.getElementById('pointsInput').value);
-                if (isNaN(pts)) return;
-                if (!teacher.monthlyPoints) teacher.monthlyPoints = {};
-                teacher.monthlyPoints[monthKey] = (teacher.monthlyPoints[monthKey] || 0) + pts;
-                await saveData();
-                alert(`تم تعديل النقاط. الإجمالي الآن: ${teacher.monthlyPoints[monthKey]}`);
-                // تحديث عرض النقاط
-                document.querySelector('#editArea .mt-2 strong').innerText = teacher.monthlyPoints[monthKey];
-            });
+        document.getElementById('applyPoints').addEventListener('click', async function() {
+            let pts = parseInt(document.getElementById('pointsInput').value);
+            if (isNaN(pts)) return;
+            if (!teacher.monthlyPoints) teacher.monthlyPoints = {};
+            teacher.monthlyPoints[monthKey] = (teacher.monthlyPoints[monthKey] || 0) + pts;
+            await saveData();
+            alert(`تم تعديل النقاط. الإجمالي الآن: ${teacher.monthlyPoints[monthKey]}`);
+            document.querySelector('#editArea .mt-2 strong').innerText = teacher.monthlyPoints[monthKey];
         });
     });
+});
 
-    // ======================== نسخ احتياطي واستعادة ========================
-    document.getElementById('backupBtn').addEventListener('click', async function() {
-        let data = { teachers, adminPassword };
-        let blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
-        let url = URL.createObjectURL(blob);
-        let a = document.createElement('a');
-        a.href = url;
-        a.download = 'backup.json';
-        a.click();
-    });
+// ======================== نسخ احتياطي واستعادة ========================
+document.getElementById('backupBtn').addEventListener('click', async function() {
+    let data = { teachers, adminPassword };
+    let blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+    let url = URL.createObjectURL(blob);
+    let a = document.createElement('a');
+    a.href = url;
+    a.download = 'backup.json';
+    a.click();
+});
 
-    document.getElementById('restoreBtn').addEventListener('click', function() {
-        let input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.json';
-        input.onchange = function(e) {
-            let file = e.target.files[0];
-            let reader = new FileReader();
-            reader.onload = async function(ev) {
-                let data = JSON.parse(ev.target.result);
-                teachers = data.teachers || [];
-                // تأكد من وجود monthlyPoints لكل اخصائي بعد الاستعادة
-                teachers.forEach(t => {
-                    if (!t.monthlyPoints) t.monthlyPoints = {};
-                });
-                adminPassword = data.adminPassword || '1234';
-                await saveData();
-                alert('تمت الاستعادة');
-            };
-            reader.readAsText(file);
+document.getElementById('restoreBtn').addEventListener('click', function() {
+    let input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = function(e) {
+        let file = e.target.files[0];
+        let reader = new FileReader();
+        reader.onload = async function(ev) {
+            let data = JSON.parse(ev.target.result);
+            teachers = data.teachers || [];
+            teachers.forEach(t => {
+                if (!t.monthlyPoints) t.monthlyPoints = {};
+            });
+            adminPassword = data.adminPassword || '1234';
+            await saveData();
+            alert('تمت الاستعادة');
         };
-        input.click();
-    });
+        reader.readAsText(file);
+    };
+    input.click();
+});
 
-    // ======================== تغيير باسورد الإدارة ========================
-    document.getElementById('changeAdminPassBtn').addEventListener('click', async function() {
-        let newPass = prompt('أدخل كلمة المرور الجديدة للإدارة');
-        if (newPass) {
-            adminPassword = newPass;
-            await saveData();
-            alert('تم التغيير');
-        }
-    });
+// ======================== تغيير باسورد الإدارة ========================
+document.getElementById('changeAdminPassBtn').addEventListener('click', async function() {
+    let newPass = prompt('أدخل كلمة المرور الجديدة للإدارة');
+    if (newPass) {
+        adminPassword = newPass;
+        await saveData();
+        alert('تم التغيير');
+    }
+});
 
-    // ======================== أحداث التنقل ========================
-    document.getElementById('adminMainBtn').addEventListener('click', showAdminLogin);
-    document.getElementById('teacherMainBtn').addEventListener('click', showTeacherLogin);
-    document.getElementById('backFromAdminLogin').addEventListener('click', showMain);
-    document.getElementById('backFromTeacherLogin').addEventListener('click', showMain);
-    document.getElementById('logoutAdmin').addEventListener('click', function() { showMain(); });
-    document.getElementById('logoutTeacher').addEventListener('click', function() { currentTeacherId = null; saveData(); showMain(); });
+// ======================== أحداث التنقل ========================
+document.getElementById('adminMainBtn').addEventListener('click', showAdminLogin);
+document.getElementById('teacherMainBtn').addEventListener('click', showTeacherLogin);
+document.getElementById('backFromAdminLogin').addEventListener('click', showMain);
+document.getElementById('backFromTeacherLogin').addEventListener('click', showMain);
+document.getElementById('logoutAdmin').addEventListener('click', function() { showMain(); });
+document.getElementById('logoutTeacher').addEventListener('click', function() { currentTeacherId = null; saveData(); showMain(); });
 
-    document.getElementById('submitAdminLogin').addEventListener('click', function() {
-        if (document.getElementById('adminPass').value === adminPassword) {
-            showAdminPanel();
-        } else {
-            document.getElementById('adminLoginError').innerText = 'كلمة سر خطأ';
-        }
-    });
+document.getElementById('submitAdminLogin').addEventListener('click', function() {
+    if (document.getElementById('adminPass').value === adminPassword) {
+        showAdminPanel();
+    } else {
+        document.getElementById('adminLoginError').innerText = 'كلمة سر خطأ';
+    }
+});
 
-    document.getElementById('submitTeacherLogin').addEventListener('click', async function() {
-        let user = document.getElementById('teacherUsername').value;
-        let pass = document.getElementById('teacherPassword').value;
-        let teacher = teachers.find(t => t.username === user && t.password === pass);
-        if (teacher) {
-            currentTeacherId = teacher.id;
-            await saveData();
-            showTeacherPanel(teacher);
-        } else {
-            document.getElementById('teacherLoginError').innerText = 'بيانات دخول غير صحيحة';
-        }
-    });
+document.getElementById('submitTeacherLogin').addEventListener('click', async function() {
+    let user = document.getElementById('teacherUsername').value;
+    let pass = document.getElementById('teacherPassword').value;
+    let teacher = teachers.find(t => t.username === user && t.password === pass);
+    if (teacher) {
+        currentTeacherId = teacher.id;
+        await saveData();
+        showTeacherPanel(teacher);
+    } else {
+        document.getElementById('teacherLoginError').innerText = 'بيانات دخول غير صحيحة';
+    }
+});
 
-    document.getElementById('addTeacherBtn').addEventListener('click', function() { showTeacherModal(); });
+document.getElementById('addTeacherBtn').addEventListener('click', function() { showTeacherModal(); });
 
-    // ======================== تهيئة الصفحة ========================
-    (async function init() {
-        await loadData();
-        if (!(await autoLoginTeacher())) {
-            showMain();
-        }
-    })();
+// ======================== تهيئة الصفحة ========================
+(async function init() {
+    await loadData();
+    if (!(await autoLoginTeacher())) {
+        showMain();
+    }
+})();
 </script>
 </body>
 </html>
