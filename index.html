@@ -91,6 +91,9 @@
                 <button class="btn btn-lg btn-danger mx-2" id="checkOutBtn"><i class="fas fa-sign-out-alt"></i> تسجيل انصراف</button>
             </div>
             <div class="text-center sync-note mb-3">يتم الحفظ بشكل مستقل لكل أخصائي لمنع فقدان التسجيلات.</div>
+            <div id="saveSuccessMessage" class="alert alert-success text-center hidden" role="alert">
+             تم الحفظ بنجاح
+            </div>
             <div id="teacherMonthDisplay" class="table-responsive"></div>
         </div>
 
@@ -354,6 +357,18 @@
             document.getElementById('teacherNameDisplay').innerText = teacher.name;
             renderTeacherCalendar(teacher);
         }
+        function showSaveSuccess(message = 'تم الحفظ بنجاح') {
+    const msg = document.getElementById('saveSuccessMessage');
+    if (!msg) return;
+
+    msg.innerText = message;
+    msg.classList.remove('hidden');
+
+    clearTimeout(window.saveMsgTimer);
+    window.saveMsgTimer = setTimeout(() => {
+        msg.classList.add('hidden');
+    }, 3000);
+}
 
         function renderAdminContent(view) {
             let contentDiv = document.getElementById('adminContent');
@@ -495,8 +510,10 @@
                 });
 
                 if (!result.committed) {
-                    alert(type === 'checkIn' ? 'تم تسجيل الحضور مسبقاً' : 'يجب تسجيل الحضور أولاً أو تم تسجيل الانصراف مسبقاً');
-                }
+    alert(type === 'checkIn' ? 'تم تسجيل الحضور مسبقاً' : 'يجب تسجيل الحضور أولاً أو تم تسجيل الانصراف مسبقاً');
+} else {
+    showSaveSuccess(type === 'checkIn' ? 'تم تسجيل الحضور بنجاح' : 'تم تسجيل الانصراف بنجاح');
+}
             } catch (error) {
                 console.error(error);
                 alert('تعذر حفظ التسجيل. تأكد من الاتصال بالإنترنت ثم أعد المحاولة');
@@ -707,10 +724,14 @@
         document.getElementById('backFromTeacherLogin').addEventListener('click', showMain);
         document.getElementById('logoutAdmin').addEventListener('click', showMain);
         document.getElementById('logoutTeacher').addEventListener('click', function() {
-            currentTeacherId = null;
-            localStorage.removeItem('currentTeacherId');
-            showMain();
-        });
+    currentTeacherId = null;
+    localStorage.removeItem('currentTeacherId');
+
+    const msg = document.getElementById('saveSuccessMessage');
+    if (msg) msg.classList.add('hidden');
+
+    showMain();
+});
 
         document.getElementById('submitAdminLogin').addEventListener('click', function() {
             if (document.getElementById('adminPass').value === adminPassword) {
